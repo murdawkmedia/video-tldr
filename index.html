@@ -191,9 +191,9 @@
             margin-bottom: 20px;
         }
         
-        .qr-container canvas {
-            max-width: 200px !important;
-            height: auto !important;
+        .qr-container img {
+            max-width: 200px;
+            height: auto;
         }
         
         .price-tag {
@@ -212,23 +212,60 @@
             color: var(--text-secondary);
         }
         
-        .invoice-text {
+        /* Invoice Display */
+        .invoice-container {
             background: var(--bg-secondary);
-            padding: 12px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 11px;
-            word-break: break-all;
-            color: var(--text-secondary);
+            border-radius: 10px;
+            padding: 16px;
             margin-bottom: 16px;
-            max-height: 80px;
-            overflow-y: auto;
         }
         
+        .invoice-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .invoice-text {
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            color: var(--text-primary);
+            word-break: break-all;
+            line-height: 1.5;
+            cursor: pointer;
+            padding: 10px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            transition: border-color 0.2s;
+        }
+        
+        .invoice-text:hover {
+            border-color: var(--accent);
+        }
+        
+        .invoice-text.copied {
+            border-color: var(--success);
+        }
+        
+        .copy-hint {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 8px;
+        }
+        
+        .copy-hint.success {
+            color: var(--success);
+        }
+
         .copy-btn {
-            padding: 10px 16px;
+            padding: 12px 16px;
             font-size: 14px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
         
         /* Success Section */
@@ -277,6 +314,7 @@
             border-top-color: currentColor;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
+            display: inline-block;
         }
         
         @keyframes spin {
@@ -294,6 +332,19 @@
         .footer a {
             color: var(--accent);
             text-decoration: none;
+        }
+        
+        /* Wallet buttons */
+        .wallet-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .wallet-buttons .btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -348,14 +399,29 @@
                 </div>
                 
                 <div class="qr-container">
-                    <div id="qr-code"></div>
+                    <img id="qr-code" alt="Lightning Invoice QR Code" />
                 </div>
                 
-                <div class="invoice-text" id="invoice-text"></div>
+                <!-- Invoice with tap to copy -->
+                <div class="invoice-container">
+                    <div class="invoice-label">
+                        ⚡ Lightning Invoice
+                    </div>
+                    <div class="invoice-text" id="invoice-display" onclick="copyInvoice()"></div>
+                    <div class="copy-hint" id="copy-hint">Tap to copy full invoice</div>
+                </div>
                 
-                <button class="btn btn-secondary copy-btn" id="btn-copy">
-                    📋 Copy Invoice
-                </button>
+                <!-- Hidden full invoice -->
+                <input type="hidden" id="invoice-full" />
+                
+                <div class="wallet-buttons">
+                    <button class="btn btn-secondary" id="btn-copy" onclick="copyInvoice()">
+                        📋 Copy
+                    </button>
+                    <button class="btn btn-primary" id="btn-open-wallet" onclick="openWallet()">
+                        ⚡ Open Wallet
+                    </button>
+                </div>
                 
                 <div id="payment-error" class="error-message" style="display: none;"></div>
                 
@@ -386,9 +452,6 @@
             Powered by <a href="https://getalby.com" target="_blank">Alby</a> & <a href="https://n8n.io" target="_blank">n8n</a>
         </div>
     </div>
-    
-    <!-- QR Code Library -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     
     <script>
         // n8n Webhook URLs
@@ -445,17 +508,66 @@
             setTimeout(() => el.style.display = 'none', 5000);
         }
         
-        // Generate QR Code
+        // Truncate invoice for display (show first 20 and last 15 chars)
+        function truncateInvoice(invoice) {
+            if (invoice.length <= 40) return invoice;
+            return invoice.substring(0, 20) + '...' + invoice.substring(invoice.length - 15);
+        }
+        
+        // Generate QR Code using Google Charts API (always works, no library needed)
         function generateQR(invoice) {
-            const container = document.getElementById('qr-code');
-            container.innerHTML = '';
-            QRCode.toCanvas(invoice.toUpperCase(), {
-                width: 200,
-                margin: 2,
-                color: { dark: '#000000', light: '#ffffff' }
-            }, (err, canvas) => {
-                if (!err) container.appendChild(canvas);
-            });
+            const qrImg = document.getElementById('qr-code');
+            const data = encodeURIComponent(invoice.toUpperCase());
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${data}`;
+        }
+        
+        // Copy invoice to clipboard
+        async function copyInvoice() {
+            const invoice = document.getElementById('invoice-full').value;
+            const hint = document.getElementById('copy-hint');
+            const display = document.getElementById('invoice-display');
+            const btn = document.getElementById('btn-copy');
+            
+            try {
+                await navigator.clipboard.writeText(invoice);
+                hint.textContent = '✓ Copied to clipboard!';
+                hint.classList.add('success');
+                display.classList.add('copied');
+                btn.innerHTML = '✓ Copied!';
+                
+                setTimeout(() => {
+                    hint.textContent = 'Tap to copy full invoice';
+                    hint.classList.remove('success');
+                    display.classList.remove('copied');
+                    btn.innerHTML = '📋 Copy';
+                }, 2000);
+            } catch (err) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = invoice;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                hint.textContent = '✓ Copied to clipboard!';
+                hint.classList.add('success');
+                btn.innerHTML = '✓ Copied!';
+                
+                setTimeout(() => {
+                    hint.textContent = 'Tap to copy full invoice';
+                    hint.classList.remove('success');
+                    btn.innerHTML = '📋 Copy';
+                }, 2000);
+            }
+        }
+        
+        // Open in Lightning wallet
+        function openWallet() {
+            const invoice = document.getElementById('invoice-full').value;
+            window.location.href = 'lightning:' + invoice;
         }
         
         // Submit Form - Get Invoice
@@ -495,8 +607,14 @@
                     currentInvoice = data.invoice;
                     currentEmail = email;
                     
-                    document.getElementById('invoice-text').textContent = data.invoice;
-                    generateQR(`lightning:${data.invoice}`);
+                    // Store full invoice
+                    document.getElementById('invoice-full').value = data.invoice;
+                    
+                    // Show truncated version
+                    document.getElementById('invoice-display').textContent = truncateInvoice(data.invoice);
+                    
+                    // Generate QR code
+                    generateQR('lightning:' + data.invoice);
                     
                     setLoading(btn, false, 'Get Invoice');
                     showSection('payment', 2);
@@ -507,28 +625,6 @@
                 console.error('Invoice creation error:', err);
                 showError('form-error', err.message || 'Something went wrong. Please try again.');
                 setLoading(btn, false, 'Get Invoice');
-            }
-        });
-        
-        // Copy Invoice
-        document.getElementById('btn-copy').addEventListener('click', async () => {
-            try {
-                await navigator.clipboard.writeText(currentInvoice);
-                const btn = document.getElementById('btn-copy');
-                btn.textContent = '✓ Copied!';
-                setTimeout(() => btn.textContent = '📋 Copy Invoice', 2000);
-            } catch (err) {
-                // Fallback for older browsers
-                const textArea = document.createElement('textarea');
-                textArea.value = currentInvoice;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                
-                const btn = document.getElementById('btn-copy');
-                btn.textContent = '✓ Copied!';
-                setTimeout(() => btn.textContent = '📋 Copy Invoice', 2000);
             }
         });
         
