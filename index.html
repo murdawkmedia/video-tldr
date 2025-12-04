@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video TLDR ⚡ - Pay with Lightning</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #232323;
+            --accent: #f7931a;
+            --accent-hover: #ffab40;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --success: #00c853;
+            --error: #ff5252;
+            --border: #333;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 480px;
+        }
+        
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 32px;
+            border: 1px solid var(--border);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .lightning-bolt {
+            color: var(--accent);
+        }
+        
+        /* Step Indicator */
+        .steps {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        
+        .step-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: all 0.3s ease;
+        }
+        
+        .step-dot.active {
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+        }
+        
+        .step-dot.completed {
+            background: var(--success);
+        }
+        
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 16px;
+            transition: border-color 0.2s ease;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        input::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 10px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: #000;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            border-color: var(--accent);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Sections */
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* QR Code Section */
+        .qr-container {
+            text-align: center;
+            padding: 24px;
+            background: #fff;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .qr-container canvas {
+            max-width: 200px !important;
+            height: auto !important;
+        }
+        
+        .price-tag {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .price-tag .amount {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .price-tag .currency {
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+        
+        .invoice-text {
+            background: var(--bg-secondary);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            word-break: break-all;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+        
+        .copy-btn {
+            padding: 10px 16px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        /* Success Section */
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+        }
+        
+        .success-message {
+            text-align: center;
+        }
+        
+        .success-message h2 {
+            margin-bottom: 12px;
+            color: var(--success);
+        }
+        
+        .success-message p {
+            color: var(--text-secondary);
+        }
+        
+        /* Error Message */
+        .error-message {
+            background: rgba(255, 82, 82, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 24px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+        
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1><span class="lightning-bolt">⚡</span> Video TLDR</h1>
+                <p>Get a summary of any YouTube video for 21 sats</p>
+            </div>
+            
+            <div class="steps">
+                <div class="step-dot active" id="step1"></div>
+                <div class="step-dot" id="step2"></div>
+                <div class="step-dot" id="step3"></div>
+            </div>
+            
+            <!-- Section 1: Input Form -->
+            <div class="section active" id="section-form">
+                <div class="form-group">
+                    <label for="youtube-url">YouTube Video URL</label>
+                    <input 
+                        type="url" 
+                        id="youtube-url" 
+                        placeholder="https://youtube.com/watch?v=..." 
+                        required
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        placeholder="your@email.com" 
+                        required
+                    >
+                </div>
+                
+                <div id="form-error" class="error-message" style="display: none;"></div>
+                
+                <button class="btn btn-primary" id="btn-submit">
+                    <span class="btn-text">Get Invoice</span>
+                </button>
+            </div>
+            
+            <!-- Section 2: Payment -->
+            <div class="section" id="section-payment">
+                <div class="price-tag">
+                    <span class="amount">21</span>
+                    <span class="currency">sats</span>
+                </div>
+                
+                <div class="qr-container">
+                    <div id="qr-code"></div>
+                </div>
+                
+                <div class="invoice-text" id="invoice-text"></div>
+                
+                <button class="btn btn-secondary copy-btn" id="btn-copy">
+                    📋 Copy Invoice
+                </button>
+                
+                <div id="payment-error" class="error-message" style="display: none;"></div>
+                
+                <button class="btn btn-primary" id="btn-verify">
+                    <span class="btn-text">I've Paid - Check Status</span>
+                </button>
+                
+                <button class="btn btn-secondary" id="btn-back" style="margin-top: 12px;">
+                    ← Start Over
+                </button>
+            </div>
+            
+            <!-- Section 3: Success -->
+            <div class="section" id="section-success">
+                <div class="success-icon">✓</div>
+                <div class="success-message">
+                    <h2>Payment Confirmed!</h2>
+                    <p id="success-text">Your video summary is being processed and will be sent to your email shortly.</p>
+                </div>
+                
+                <button class="btn btn-primary" id="btn-another" style="margin-top: 24px;">
+                    Summarize Another Video
+                </button>
+            </div>
+        </div>
+        
+        <div class="footer">
+            Powered by <a href="https://getalby.com" target="_blank">Alby</a> & <a href="https://n8n.io" target="_blank">n8n</a>
+        </div>
+    </div>
+    
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    
+    <script>
+        // n8n Webhook URLs
+        const WEBHOOK_START = 'https://studio-btc.app.n8n.cloud/webhook/tldr-start';
+        const WEBHOOK_VERIFY = 'https://studio-btc.app.n8n.cloud/webhook/tldr-verify';
+        
+        // State
+        let currentInvoice = '';
+        let currentEmail = '';
+        
+        // DOM Elements
+        const sections = {
+            form: document.getElementById('section-form'),
+            payment: document.getElementById('section-payment'),
+            success: document.getElementById('section-success')
+        };
+        
+        const steps = {
+            1: document.getElementById('step1'),
+            2: document.getElementById('step2'),
+            3: document.getElementById('step3')
+        };
+        
+        // Show Section
+        function showSection(name, stepNum) {
+            Object.values(sections).forEach(s => s.classList.remove('active'));
+            sections[name].classList.add('active');
+            
+            Object.entries(steps).forEach(([num, el]) => {
+                el.classList.remove('active', 'completed');
+                if (parseInt(num) < stepNum) el.classList.add('completed');
+                if (parseInt(num) === stepNum) el.classList.add('active');
+            });
+        }
+        
+        // Set Loading State
+        function setLoading(btn, isLoading, originalText) {
+            const text = btn.querySelector('.btn-text');
+            if (isLoading) {
+                btn.disabled = true;
+                btn.dataset.originalText = text.textContent;
+                text.innerHTML = '<div class="spinner"></div>';
+            } else {
+                btn.disabled = false;
+                text.textContent = originalText || btn.dataset.originalText || 'Submit';
+            }
+        }
+        
+        // Show Error
+        function showError(elementId, message) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+        
+        // Generate QR Code
+        function generateQR(invoice) {
+            const container = document.getElementById('qr-code');
+            container.innerHTML = '';
+            QRCode.toCanvas(invoice.toUpperCase(), {
+                width: 200,
+                margin: 2,
+                color: { dark: '#000000', light: '#ffffff' }
+            }, (err, canvas) => {
+                if (!err) container.appendChild(canvas);
+            });
+        }
+        
+        // Submit Form - Get Invoice
+        document.getElementById('btn-submit').addEventListener('click', async () => {
+            const youtubeUrl = document.getElementById('youtube-url').value.trim();
+            const email = document.getElementById('email').value.trim();
+            
+            // Validation
+            if (!youtubeUrl || !email) {
+                showError('form-error', 'Please fill in both fields');
+                return;
+            }
+            
+            if (!youtubeUrl.match(/youtube\.com|youtu\.be/i)) {
+                showError('form-error', 'Please enter a valid YouTube URL');
+                return;
+            }
+            
+            if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                showError('form-error', 'Please enter a valid email address');
+                return;
+            }
+            
+            const btn = document.getElementById('btn-submit');
+            setLoading(btn, true);
+            
+            try {
+                const response = await fetch(WEBHOOK_START, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ youtubeUrl, email })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.invoice) {
+                    currentInvoice = data.invoice;
+                    currentEmail = email;
+                    
+                    document.getElementById('invoice-text').textContent = data.invoice;
+                    generateQR(`lightning:${data.invoice}`);
+                    
+                    setLoading(btn, false, 'Get Invoice');
+                    showSection('payment', 2);
+                } else {
+                    throw new Error(data.message || 'Failed to create invoice');
+                }
+            } catch (err) {
+                console.error('Invoice creation error:', err);
+                showError('form-error', err.message || 'Something went wrong. Please try again.');
+                setLoading(btn, false, 'Get Invoice');
+            }
+        });
+        
+        // Copy Invoice
+        document.getElementById('btn-copy').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(currentInvoice);
+                const btn = document.getElementById('btn-copy');
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => btn.textContent = '📋 Copy Invoice', 2000);
+            } catch (err) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = currentInvoice;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                const btn = document.getElementById('btn-copy');
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => btn.textContent = '📋 Copy Invoice', 2000);
+            }
+        });
+        
+        // Verify Payment
+        document.getElementById('btn-verify').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-verify');
+            setLoading(btn, true);
+            
+            try {
+                const response = await fetch(WEBHOOK_VERIFY, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ invoice: currentInvoice })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.status === 'paid') {
+                    document.getElementById('success-text').textContent = 
+                        `Your video summary has been sent to ${currentEmail}`;
+                    setLoading(btn, false, "I've Paid - Check Status");
+                    showSection('success', 3);
+                } else {
+                    showError('payment-error', data.message || 'Payment not yet received. Please pay and try again.');
+                    setLoading(btn, false, "I've Paid - Check Status");
+                }
+            } catch (err) {
+                console.error('Payment verification error:', err);
+                showError('payment-error', 'Could not verify payment. Please try again.');
+                setLoading(btn, false, "I've Paid - Check Status");
+            }
+        });
+        
+        // Back Button
+        document.getElementById('btn-back').addEventListener('click', () => {
+            currentInvoice = '';
+            showSection('form', 1);
+        });
+        
+        // Another Video Button
+        document.getElementById('btn-another').addEventListener('click', () => {
+            currentInvoice = '';
+            currentEmail = '';
+            document.getElementById('youtube-url').value = '';
+            document.getElementById('email').value = '';
+            showSection('form', 1);
+        });
+        
+        // Allow Enter key to submit
+        document.getElementById('email').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('btn-submit').click();
+            }
+        });
+        
+        document.getElementById('youtube-url').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('email').focus();
+            }
+        });
+    </script>
+</body>
+</html>
